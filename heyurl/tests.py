@@ -1,3 +1,5 @@
+from heyurl.exceptions import ExistingUrlException, InvalidURLException
+from heyurl.services import CreateShortUrlService, CreateUrlService, ValidateUniqueOriginalUrl, ValidateUrlFormatService
 from django.test import TestCase
 from django.urls import reverse
 from .models import Url
@@ -32,4 +34,58 @@ class IndexTests(TestCase):
         If short URL exists, stats logged and redirected to original URL
         """
         # response = self.client.get(reverse('u/dne'))
-        
+
+
+class CreateUrlServiceTest(TestCase):
+    def test_valid_one(self):
+        given_url = 'http://google.com'
+        before_save_count = Url.objects.count()
+        expected_result = CreateUrlService(given_url).call()
+        after_save_count = Url.objects.count()
+        self.assertIsInstance(expected_result, Url)
+        self.assertNotEqual(before_save_count, after_save_count)
+
+    def test_invalid_one(self):
+        given_url = 'asdfasdfasdf'
+        with self.assertRaises(InvalidURLException):
+            CreateUrlService(given_url).call()
+
+    def test_existing_url(self):
+        given_url = 'http://google.com'
+        Url(short_url='asdfg',original_url=given_url).save()
+        with self.assertRaises(ExistingUrlException):
+            CreateUrlService(given_url).call()
+
+
+class CreateShortUrlTest(TestCase):
+    def test_given_one(self):
+        given_url = 'http://google.com'
+        result = CreateShortUrlService(given_url).call()
+        self.assertEqual(len(result), 5)
+
+
+class ValidateUniqueOriginalUrlTest(TestCase):
+    def test_existing_url(self):
+        given_url = 'http://google.com'
+        Url(short_url='asdfg',original_url=given_url).save()
+        with self.assertRaises(ExistingUrlException):
+            ValidateUniqueOriginalUrl(given_url).call()
+
+
+    def test_not_existing(self):
+        given_url = 'http://google.com'
+        result = ValidateUniqueOriginalUrl(given_url).call()
+        self.assertTrue(result)
+
+
+class ValidateUrlFormatTest(TestCase):
+    def test_invalid(self):
+        given_url = 'http//google.com'
+        with self.assertRaises(InvalidURLException):
+            ValidateUrlFormatService.call(given_url)
+
+    def test_valid(self):
+        given_url = 'http://google.com'
+        result = ValidateUrlFormatService.call(given_url)
+        self.assertTrue(result)
+
