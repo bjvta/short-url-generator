@@ -1,9 +1,10 @@
 from heyurl.services import CreateShortUrlService, CreateUrlService
 from heyurl.exceptions import ExistingUrlException, InvalidURLException
+from django.shortcuts import get_object_or_404
 from django.shortcuts import render
 from django.http import HttpResponse, HttpResponseRedirect
 from django.urls import reverse
-from .models import Url
+from .models import Click, Url
 
 def index(request):
     urls = Url.objects.order_by('-created_at')
@@ -24,5 +25,10 @@ def store(request):
 
 
 def short_url(request, short_url):
-    # FIXME: Do the logging to the db of the click with the user agent and browser
+    browser = request.user_agent.browser.family
+    platform = request.user_agent.os.family
+    url = get_object_or_404(Url, short_url=short_url)
+    Click.objects.create(url=url, browser=browser, platform=platform)
+    url.clicks = url.clicks + 1
+    url.save()
     return HttpResponse("You're looking at url %s" % short_url)
