@@ -32,3 +32,10 @@ def short_url(request, short_url):
     url.clicks = url.clicks + 1
     url.save()
     return HttpResponse("You're looking at url %s" % short_url)
+
+
+def short_url_stats(request, short_url):
+    url = get_object_or_404(Url, short_url=short_url)
+
+    context = {url : url}
+    return render(request, 'heyurl/stats.html', context)
